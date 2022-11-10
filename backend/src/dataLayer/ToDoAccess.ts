@@ -12,9 +12,10 @@ const logger = createLogger('TodosAccess')
 
 
 export class ToDoAccess {
+    // static s3Client: any;
     constructor(
         private readonly docClient: DocumentClient = new XAWS.DynamoDB.DocumentClient(),
-        private readonly s3Client: Types = new AWS.S3({ signatureVersion: 'v4' }),
+        private readonly s3Client: Types = new XAWS.S3({ signatureVersion: 'v4' }),
         private readonly todoTable = process.env.TODOS_TABLE,
         private readonly s3BucketName = process.env.S3_BUCKET_NAME) {
     }
@@ -105,6 +106,27 @@ export class ToDoAccess {
         return "" as string;
     }
 
+    async updateTodoAttachmentUrl(userId: string, todoId: string, attachmentUrl: string): Promise<void> {
+        logger.info('updateTodoAttachmentUrl', { userId, todoId, attachmentUrl })
+        
+        const params = {
+            TableName: this.todoTable!,
+            Key: {
+                "userId": userId,
+                "todoId": todoId
+            },
+            UpdateExpression: 'set attachmentUrl = :attachmentUrl',
+            ExpressionAttributeValues: {
+                ':attachmentUrl': attachmentUrl
+            }
+        };
+
+        const result = await this.docClient.update(params).promise();
+        console.log(result);
+
+    
+    }
+
     async generateUploadUrl(todoId: string): Promise<string> {
         // console.log("Generating URL");
         logger.info('Generating Attachment URL', { todoId })
@@ -114,6 +136,8 @@ export class ToDoAccess {
             Key: todoId,
             Expires: 1000,
         });
+
+        // await this.updateTodoAttachmentUrl(userId,todoId, `https://${this.s3BucketName}.s3.amazonaws.com/${todoId}`)
         console.log(url);
 
         return url as string;
